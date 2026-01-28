@@ -39,12 +39,13 @@ from src.classes.event import Event
 from src.classes.celestial_phenomenon import celestial_phenomena_by_id
 from src.classes.long_term_objective import set_user_long_term_objective, clear_user_long_term_objective
 from src.sim.save.save_game import save_game, list_saves
-from src.sim.load.load_game import load_game
+from src.sim.load.load_game import load_game, get_events_db_path
 from src.utils import protagonist as prot_utils
 from src.utils.llm.client import test_connectivity
 from src.utils.llm.config import LLMConfig, LLMMode
 from src.run.data_loader import reload_all_static_data
 from src.classes.language import language_manager, LanguageType
+from datetime import datetime
 
 # 全局游戏实例
 game_instance = {
