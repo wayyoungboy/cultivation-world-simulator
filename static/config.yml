@@ -19,9 +19,22 @@ paths:
   # game_configs: static/game_configs/ <-- Managed by code now
   saves: assets/saves/
 
+# 存储配置
+storage:
+  # 存储类型: sqlite 或 mysql
+  type: sqlite
+  # MySQL 配置（仅当 type 为 mysql 时使用）
+  mysql:
+    host: localhost
+    port: 3306
+    user: root
+    password: password
+    database: cultivation_world
+
 ai:
-  max_concurrent_requests: 10
+  max_concurrent_requests: 5  # 最大并发请求数，基于 RPM 1000 限制
   max_parse_retries: 3
+  request_delay: 10  # 请求间隔延迟（秒），基于 RPM 1000 限制
 
 game:
   init_npc_num: 9

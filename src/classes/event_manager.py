@@ -55,6 +55,25 @@ class EventManager:
         return cls(storage)
 
     @classmethod
+    def create_with_mysql(cls, host: str, port: int, user: str, password: str, database: str) -> "EventManager":
+        """
+        工厂方法：创建使用 MySQL 的事件管理器。
+
+        Args:
+            host: MySQL 主机地址。
+            port: MySQL 端口。
+            user: MySQL 用户名。
+            password: MySQL 密码。
+            database: MySQL 数据库名。
+
+        Returns:
+            配置好的 EventManager 实例。
+        """
+        from src.classes.event_storage_mysql import EventStorageMySQL
+        storage = EventStorageMySQL(host, port, user, password, database)
+        return cls(storage)
+
+    @classmethod
     def create_in_memory(cls) -> "EventManager":
         """
         工厂方法：创建内存模式的事件管理器（仅用于测试）。

@@ -4,8 +4,9 @@ import json
 import urllib.request
 import urllib.error
 import asyncio
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from src.run.log import log_llm_call
 from src.utils.config import CONFIG
@@ -16,6 +17,15 @@ from .exceptions import LLMError, ParseError
 
 # 模块级信号量，懒加载
 _SEMAPHORE: Optional[asyncio.Semaphore] = None
+
+
+# 默认延迟时间（秒）
+DEFAULT_REQUEST_DELAY = 1.0
+
+
+def _get_request_delay() -> float:
+    """获取配置的请求延迟时间"""
+    return getattr(CONFIG.ai, "request_delay", DEFAULT_REQUEST_DELAY)
 
 
 def _get_semaphore() -> asyncio.Semaphore:
@@ -68,17 +78,37 @@ def _call_with_requests(config: LLMConfig, prompt: str) -> str:
 
 async def call_llm(prompt: str, mode: LLMMode = LLMMode.NORMAL) -> str:
     """
-    基础 LLM 调用，自动控制并发
+    基础 LLM 调用，自动控制并发和速率限制
     使用 urllib 直接调用 OpenAI 兼容接口
     """
     config = LLMConfig.from_mode(mode)
     semaphore = _get_semaphore()
     
-    async with semaphore:
-        result = await asyncio.to_thread(_call_with_requests, config, prompt)
+    # 指数退避重试参数
+    max_retries = 3
+    base_delay = 2.0
     
-    log_llm_call(config.model_name, prompt, result)
-    return result
+    for attempt in range(max_retries + 1):
+        async with semaphore:
+            # 添加请求延迟，避免触发速率限制
+            request_delay = _get_request_delay()
+            await asyncio.sleep(request_delay)
+            
+            try:
+                result = await asyncio.to_thread(_call_with_requests, config, prompt)
+                log_llm_call(config.model_name, prompt, result)
+                return result
+            except Exception as e:
+                error_msg = str(e)
+                # 检查是否是 429 速率限制错误
+                if "429" in error_msg and attempt < max_retries:
+                    # 计算指数退避延迟
+                    delay = base_delay * (2 ** attempt) + (0.1 * attempt)
+                    print(f"Rate limit exceeded, retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    raise
 
 
 async def call_llm_json(

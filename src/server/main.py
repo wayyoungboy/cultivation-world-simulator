@@ -328,25 +328,44 @@ async def init_game_async():
         update_init_progress(1, "loading_map")
         game_map = await asyncio.to_thread(load_cultivation_world_map)
 
-        # 初始化 SQLite 事件数据库
-        from datetime import datetime
-        from src.sim.load_game import get_events_db_path
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        save_name = f"save_{timestamp}"
-        saves_dir = CONFIG.paths.saves
-        saves_dir.mkdir(parents=True, exist_ok=True)
-        save_path = saves_dir / f"{save_name}.json"
-        events_db_path = get_events_db_path(save_path)
-        
-        game_instance["current_save_path"] = save_path
-        print(f"事件数据库: {events_db_path}")
-
-        world = World.create_with_db(
-            map=game_map,
-            month_stamp=create_month_stamp(Year(100), Month.JANUARY),
-            events_db_path=events_db_path,
-        )
+        # 初始化事件存储
+        storage_type = getattr(CONFIG.storage, "type", "sqlite")
+        if storage_type == "mysql":
+            # 使用 MySQL 存储
+            mysql_config = getattr(CONFIG.storage, "mysql", {})
+            host = getattr(mysql_config, "host", "localhost")
+            port = getattr(mysql_config, "port", 3306)
+            user = getattr(mysql_config, "user", "root")
+            password = getattr(mysql_config, "password", "password")
+            database = getattr(mysql_config, "database", "cultivation_world")
+            
+            print(f"使用 MySQL 存储: {host}:{port}/{database}")
+            world = World.create_with_mysql(
+                map=game_map,
+                month_stamp=create_month_stamp(Year(100), Month.JANUARY),
+                mysql_host=host,
+                mysql_port=port,
+                mysql_user=user,
+                mysql_password=password,
+                mysql_database=database
+            )
+        else:
+            # 默认使用 SQLite 存储
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            save_name = f"save_{timestamp}"
+            saves_dir = CONFIG.paths.saves
+            saves_dir.mkdir(parents=True, exist_ok=True)
+            save_path = saves_dir / f"{save_name}.json"
+            events_db_path = get_events_db_path(save_path)
+            
+            game_instance["current_save_path"] = save_path
+            print(f"使用 SQLite 存储: {events_db_path}")
+            
+            world = World.create_with_db(
+                map=game_map,
+                month_stamp=create_month_stamp(Year(100), Month.JANUARY),
+                events_db_path=events_db_path,
+            )
         sim = Simulator(world)
 
         # 阶段 2: 历史背景影响 (如果配置了历史)

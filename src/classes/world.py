@@ -101,6 +101,45 @@ class World():
         return desc
 
     @classmethod
+    def create_with_mysql(
+        cls,
+        map: "Map",
+        month_stamp: MonthStamp,
+        mysql_host: str,
+        mysql_port: int,
+        mysql_user: str,
+        mysql_password: str,
+        mysql_database: str,
+    ) -> "World":
+        """
+        工厂方法：创建使用 MySQL 持久化事件的 World 实例。
+
+        Args:
+            map: 地图对象。
+            month_stamp: 时间戳。
+            mysql_host: MySQL 主机地址。
+            mysql_port: MySQL 端口。
+            mysql_user: MySQL 用户名。
+            mysql_password: MySQL 密码。
+            mysql_database: MySQL 数据库名。
+
+        Returns:
+            配置好的 World 实例。
+        """
+        event_manager = EventManager.create_with_mysql(
+            mysql_host,
+            mysql_port,
+            mysql_user,
+            mysql_password,
+            mysql_database
+        )
+        return cls(
+            map=map,
+            month_stamp=month_stamp,
+            event_manager=event_manager,
+        )
+
+    @classmethod
     def create_with_db(
         cls,
         map: "Map",

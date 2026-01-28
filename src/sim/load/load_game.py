@@ -195,15 +195,39 @@ def load_game(save_path: Optional[Path] = None) -> Tuple["World", "Simulator", L
         world_data = save_data.get("world", {})
         month_stamp = MonthStamp(world_data["month_stamp"])
         
-        # 计算事件数据库路径。
-        events_db_path = get_events_db_path(save_path)
+        # 重建World对象
+        storage_type = getattr(CONFIG.storage, "type", "sqlite")
+        if storage_type == "mysql":
+            # 使用 MySQL 存储
+            mysql_config = getattr(CONFIG.storage, "mysql", {})
+            host = getattr(mysql_config, "host", "localhost")
+            port = getattr(mysql_config, "port", 3306)
+            user = getattr(mysql_config, "user", "root")
+            password = getattr(mysql_config, "password", "password")
+            database = getattr(mysql_config, "database", "cultivation_world")
+            
+            print(f"使用 MySQL 存储: {host}:{port}/{database}")
+            world = World.create_with_mysql(
+                map=game_map,
+                month_stamp=month_stamp,
+                mysql_host=host,
+                mysql_port=port,
+                mysql_user=user,
+                mysql_password=password,
+                mysql_database=database
+            )
+        else:
+            # 默认使用 SQLite 存储
+            # 计算事件数据库路径。
+            events_db_path = get_events_db_path(save_path)
 
-        # 重建World对象（使用 SQLite 事件存储）。
-        world = World.create_with_db(
-            map=game_map,
-            month_stamp=month_stamp,
-            events_db_path=events_db_path,
-        )
+            # 重建World对象（使用 SQLite 事件存储）。
+            print(f"使用 SQLite 存储: {events_db_path}")
+            world = World.create_with_db(
+                map=game_map,
+                month_stamp=month_stamp,
+                events_db_path=events_db_path,
+            )
         
         # 恢复世界历史
         history_data = world_data.get("history", {})
